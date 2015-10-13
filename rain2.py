@@ -9,6 +9,7 @@ from sklearn import preprocessing
 from sklearn import ensemble
 from sklearn import linear_model
 from sklearn.linear_model import Ridge
+from glob import glob
 
 """
 ToDo: Feature Engineering
@@ -20,6 +21,10 @@ http://blog.kaggle.com/2015/05/07/profiling-top-kagglers-kazanovacurrently-2-in-
 """
 
 #region data prep
+
+file_train = glob('../input/train/train.csv')
+file_test = glob('../input/test/test.csv')
+
 
 #ToDo: clean up train data with all missing input but valid label. put zero on label for such data
 #if one of the 4 related features (%5..%90) has no value..hard to predict
@@ -70,6 +75,7 @@ def standardize_transform(data):
 
 def prepare_train_data():
     train_file_path = "./train/train.csv"
+    #train_file_path = "./train/train_short.csv"
     train_data = load_data(train_file_path)
     train_clean = clean_data(train_data)
     train_avg = normalize_data(train_clean, train_file_path)
@@ -81,7 +87,10 @@ def prepare_train_data():
     return X_train, labels
 
 def prepare_test_data():
+
     test_file_path = "./test/test.csv"
+    #test_file_path = file_test #from kaggle site
+    #test_file_path = "./test/test_short.csv"
     test_data = load_data(test_file_path)
     test_clean = clean_data(test_data)
     test_avg = normalize_data(test_clean, test_file_path)
@@ -94,31 +103,33 @@ def prepare_test_data():
 
 #region train
 
-model = None
+
 
 
 def evaluate_models(labels, train_input):
-    regr = linear_model.LinearRegression()
-    ridge = Ridge(alpha=1.0)
-    laso = linear_model.Lasso(alpha=0.1)
-    enet = linear_model.ElasticNet(alpha=0.1)
-    clf_dtr = tree.DecisionTreeRegressor()
-    ada = ensemble.AdaBoostRegressor(n_estimators=500, learning_rate=.75)
+    print("evaluating models...")
+    #regr = linear_model.LinearRegression()
+    #ridge = Ridge(alpha=1.0)
+    #laso = linear_model.Lasso(alpha=0.1)
+    #enet = linear_model.ElasticNet(alpha=0.1)
+    #clf_dtr = tree.DecisionTreeRegressor()
+    #ada = ensemble.AdaBoostRegressor(n_estimators=500, learning_rate=.75)
 
-    bag = ensemble.BaggingRegressor(n_estimators=500)
-    extee = ensemble.ExtraTreesRegressor(n_estimators=500, max_depth=None, min_samples_split=1)
+    #bag = ensemble.BaggingRegressor(n_estimators=500)
 
-    clf_rf = ensemble.RandomForestRegressor(n_estimators=10, max_depth=4, min_samples_split=1, random_state=0)
-    params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
-              'learning_rate': 0.01, 'loss': 'ls'}
-    clf_gbt = ensemble.GradientBoostingRegressor(**params)
-    
+    #extee = ensemble.ExtraTreesRegressor(n_estimators=500, max_depth=None, min_samples_split=1)
+    clf_rf = ensemble.RandomForestRegressor(n_estimators=10, max_depth=None, min_samples_split=1,
+                                            random_state=0, max_features="auto")
+    #params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
+    #          'learning_rate': 0.01, 'loss': 'ls'}
+    #clf_gbt = ensemble.GradientBoostingRegressor(**params)
+
     #print(len(train_input))
     #print(len(labels))
     clf = clf_rf
     # model evaluator
-    scores = cross_validation.cross_val_score(clf, train_input, labels, cv=10, scoring='mean_absolute_error')
-    print("evaluation score: ", abs(sum(scores) / len(scores)))
+    scores = cross_validation.cross_val_score(clf, train_input, labels, cv=5, scoring='mean_absolute_error')
+    print("CV score: ", abs(sum(scores) / len(scores)))
     #model evaluator
     """ model evaluation
 
@@ -146,65 +157,75 @@ def evaluate_models(labels, train_input):
         """
     return clf
 
+def cv_score(clf, X, y):
+    scores = cross_validation.cross_val_score(clf, X, y, cv=5, scoring='mean_absolute_error')
+    print("CV score: ", abs(sum(scores) / len(scores)))
 
+
+model = None
 def train():
+    print("loading & preparing training data...")
     train_input, labels = prepare_train_data()
     #plot_data(train_input, "Ref")
+    print("loaded {0} training examples".format(len(train_input)))
 
-    clf = evaluate_models(labels, train_input)
+    #clf = evaluate_models(labels, train_input)
+    #n_estimators = no. of trees in the forest
+    #n_jobs = #no. of cores
+    #clf_rf = ensemble.RandomForestRegressor(n_estimators=50, max_depth=None, n_jobs=4, min_samples_split=1,
+    #                                        max_features="auto")
+    extree = ensemble.ExtraTreesRegressor(n_estimators=200, max_depth=None, min_samples_split=1, n_jobs=-1)
+
+    #params = {'n_estimators': 50, 'max_depth': 10, 'min_samples_split': 1,
+    #          'learning_rate': 0.01, 'loss': 'ls', 'max_features':5}
+    #clf_gbt = ensemble.GradientBoostingRegressor(**params)
+
+    clf = extree
+
+    #print("cross validating...")
+    #cv_score(clf, train_input, labels)
 
     #train_test does shuffle and random splits
     X_train, X_test, y_train, y_test = cross_validation.train_test_split(
-    train_input, labels, test_size=0.25, random_state=0)
+    train_input, labels, test_size=0.05, random_state=0)
 
-
-    #test_validation
-    size_train_set = int(len(train_input) * (2/3))
-    train_set = train_input[:size_train_set]
-    train_labels_set = labels[:size_train_set]
-    #print(len(train_set))
-    #model = clf.fit(train_set, train_labels_set)
 
     global model
-    #train on total training data
-    model = clf.fit(train_input, labels)
 
+    print("training model...")
+    model = clf.fit(train_input, labels)
     #model = clf.fit(X_train, y_train)
 
-    #test_set = train_input[size_train_set:]
-    #print(len(cv_set))
-    #test_labels_set = labels[size_train_set:]
-    #print(len(test_labels_set))
-
+    print("testing on holdout set...")
     pred_y = model.predict(X_test)
-    #cv_y = model.predict(train_input)
-
-    #print(len(pred_y))
     no_of_pred = len(pred_y)
+
     MAE=0
     for i,v in enumerate(pred_y):
         actual = y_test.values[i]
         predicted = v
         error = actual - predicted
-        #print("rainfall actual: {0} predicted:{1}, error:{2}".
-        #      format(actual, predicted, error))
+        print("rainfall actual: {0} predicted:{1}, error:{2}".
+              format(actual, predicted, np.abs(error)))
         MAE = MAE + np.abs(error)
     #print("MAE: ",MAE/no_of_pred)
+
     print("scikit MAE", mean_absolute_error(y_test, pred_y))
+
     return model
 #endregion train
 
 
 #test
 def predict(model):
+    print("predicting....")
     prediction_file = './rain_prediction.csv'
 
     test_input = prepare_test_data() #replace with test data
-    #print(train_input.iloc[[1]], labels[2])
     test_y = model.predict(test_input)
     print(len(test_id))
     print(len(test_y))
-
+    print("writing to file....")
     predictionDf = pd.DataFrame(index=test_id, columns=['Expected'], data=test_y)
     # # write file
     predictionDf.to_csv(prediction_file, index_label='Id', float_format='%.6f')
@@ -213,3 +234,4 @@ def predict(model):
 #report
 model = train()
 predict(model)
+
