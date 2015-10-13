@@ -195,7 +195,7 @@ def train():
     print("testing on holdout set...")
     pred_y = model.predict(X_test)
     no_of_pred = len(pred_y)
-
+    """
     MAE=0
     for i,v in enumerate(pred_y):
         actual = y_test.values[i]
@@ -205,9 +205,9 @@ def train():
               format(actual, predicted, np.abs(error)))
         MAE = MAE + np.abs(error)
     #print("MAE: ",MAE/no_of_pred)
-
+    """
     print("scikit MAE", mean_absolute_error(y_test, pred_y))
-
+    
     return model
 #endregion train
 
