@@ -9,6 +9,7 @@ from sklearn import preprocessing
 from sklearn import ensemble
 from sklearn import linear_model
 from sklearn.linear_model import Ridge
+from glob import glob
 
 """
 ToDo: Feature Engineering
@@ -20,6 +21,10 @@ http://blog.kaggle.com/2015/05/07/profiling-top-kagglers-kazanovacurrently-2-in-
 """
 
 #region data prep
+
+file_train = glob('../input/train/train.csv')
+file_test = glob('../input/test/test.csv')
+
 
 #ToDo: clean up train data with all missing input but valid label. put zero on label for such data
 #if one of the 4 related features (%5..%90) has no value..hard to predict
@@ -69,7 +74,7 @@ def standardize_transform(data):
     return  X_prep
 
 def prepare_train_data():
-    train_file_path = "C:/Work/kaggle/how_much_rain2/train/train_short.csv"
+    train_file_path = "./train/train.csv"
     train_data = load_data(train_file_path)
     train_clean = clean_data(train_data)
     train_avg = normalize_data(train_clean, train_file_path)
@@ -81,7 +86,8 @@ def prepare_train_data():
     return X_train, labels
 
 def prepare_test_data():
-    test_file_path = "C:/Work/kaggle/how_much_rain2/test/test_short.csv"
+    test_file_path = "./test/test.csv"
+    #test_file_path = file_test #from kaggle site
     test_data = load_data(test_file_path)
     test_clean = clean_data(test_data)
     test_avg = normalize_data(test_clean, test_file_path)
@@ -197,7 +203,7 @@ def train():
 
 #test
 def predict():
-    prediction_file = 'C:/Work/kaggle/how_much_rain2/rain_prediction.csv'
+    prediction_file = './rain_prediction.csv'
 
     test_input = prepare_test_data() #replace with test data
     #print(train_input.iloc[[1]], labels[2])
@@ -212,4 +218,4 @@ def predict():
 
 #report
 train()
-#predict()
+predict()
