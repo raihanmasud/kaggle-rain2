@@ -81,7 +81,7 @@ def prepare_train_data():
     return X_train, labels
 
 def prepare_test_data():
-    test_file_path = "./test/test_short.csv"
+    test_file_path = "./test/test.csv"
     test_data = load_data(test_file_path)
     test_clean = clean_data(test_data)
     test_avg = normalize_data(test_clean, test_file_path)
