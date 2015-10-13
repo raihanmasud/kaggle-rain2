@@ -112,7 +112,7 @@ def evaluate_models(labels, train_input):
     params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
               'learning_rate': 0.01, 'loss': 'ls'}
     clf_gbt = ensemble.GradientBoostingRegressor(**params)
-    global model
+    
     #print(len(train_input))
     #print(len(labels))
     clf = clf_rf
@@ -165,7 +165,7 @@ def train():
     #print(len(train_set))
     #model = clf.fit(train_set, train_labels_set)
 
-
+    global model
     #train on total training data
     model = clf.fit(train_input, labels)
 
@@ -191,12 +191,12 @@ def train():
         MAE = MAE + np.abs(error)
     #print("MAE: ",MAE/no_of_pred)
     print("scikit MAE", mean_absolute_error(y_test, pred_y))
-
+    return model
 #endregion train
 
 
 #test
-def predict():
+def predict(model):
     prediction_file = './rain_prediction.csv'
 
     test_input = prepare_test_data() #replace with test data
@@ -211,5 +211,5 @@ def predict():
 
 
 #report
-train()
-predict()
+model = train()
+predict(model)
