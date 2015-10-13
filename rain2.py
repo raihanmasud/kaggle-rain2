@@ -170,7 +170,7 @@ def train():
     #n_jobs = #no. of cores
     #clf_rf = ensemble.RandomForestRegressor(n_estimators=50, max_depth=None, n_jobs=4, min_samples_split=1,
     #                                        max_features="auto")
-    extree = ensemble.ExtraTreesRegressor(n_estimators=200, max_depth=None, min_samples_split=1, n_jobs=-1)
+    extree = ensemble.ExtraTreesRegressor(n_estimators=100, max_depth=None, min_samples_split=1, n_jobs=-1)
 
     #params = {'n_estimators': 50, 'max_depth': 10, 'min_samples_split': 1,
     #          'learning_rate': 0.01, 'loss': 'ls', 'max_features':5}
