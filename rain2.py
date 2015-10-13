@@ -69,7 +69,7 @@ def standardize_transform(data):
     return  X_prep
 
 def prepare_train_data():
-    train_file_path = "C:/Work/kaggle/how_much_rain2/train/train_short.csv"
+    train_file_path = "./train/train.csv"
     train_data = load_data(train_file_path)
     train_clean = clean_data(train_data)
     train_avg = normalize_data(train_clean, train_file_path)
@@ -81,7 +81,7 @@ def prepare_train_data():
     return X_train, labels
 
 def prepare_test_data():
-    test_file_path = "C:/Work/kaggle/how_much_rain2/test/test_short.csv"
+    test_file_path = "./test/test_short.csv"
     test_data = load_data(test_file_path)
     test_clean = clean_data(test_data)
     test_avg = normalize_data(test_clean, test_file_path)
@@ -197,7 +197,7 @@ def train():
 
 #test
 def predict():
-    prediction_file = 'C:/Work/kaggle/how_much_rain2/rain_prediction.csv'
+    prediction_file = './rain_prediction.csv'
 
     test_input = prepare_test_data() #replace with test data
     #print(train_input.iloc[[1]], labels[2])
@@ -212,4 +212,4 @@ def predict():
 
 #report
 train()
-#predict()
+predict()
