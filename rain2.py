@@ -22,10 +22,6 @@ http://blog.kaggle.com/2015/05/07/profiling-top-kagglers-kazanovacurrently-2-in-
 
 #region data prep
 
-file_train = glob('../input/train/train.csv')
-file_test = glob('../input/test/test.csv')
-
-
 #ToDo: clean up train data with all missing input but valid label. put zero on label for such data
 #if one of the 4 related features (%5..%90) has no value..hard to predict
 def load_data(file):
