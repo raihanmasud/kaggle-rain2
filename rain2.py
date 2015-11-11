@@ -79,7 +79,6 @@ def remove_outlier(train_data):
     #print(train_data.head(5))
     return train_data
 
-
 def remove_empty_rows(data):
     #remove data empty rows Ref values all nan
     #print(data.columns)
@@ -167,26 +166,19 @@ def normal_distribute_data(X):
     return X
 
 
-def imputeData(non_empty_data):
-    non_empty_data.fillna(0)
-    return non_empty_data
+def impute_data(non_empty_data):
+    return non_empty_data.fillna(0)
 
 def prepare_train_data(file_path):
     print("preparing training data...")
-    #train_file_path = "./train/train_short.csv"
     train_data = load_data(file_path)
     train_clean = clean_data(train_data)
     train_no_outlier = remove_outlier(train_clean)
     transformed_data = transform_data(train_no_outlier, file_path)
     non_empty_data = remove_empty_rows(transformed_data)
-
-
     X_train = standardize_data(non_empty_data)
-    #print(X_train.columns)
     X_train = normal_distribute_data(X_train)
-
-
-    imputed_data = imputeData(X_train)
+    imputed_data = impute_data(X_train)
     labels = imputed_data['Expected']
     X_train = imputed_data.drop(['Expected'], axis=1)
 
@@ -201,16 +193,17 @@ def prepare_train_data(file_path):
     #print(X_train.head(5000))
     return X_train, labels
 
-
 def prepare_test_data(file_path):
     #file_path = "./test/test.csv"
     #test_file_path = file_test #from kaggle site
     #test_file_path = "./test/test_short.csv"
     test_data = load_data(file_path)
+    #test_file_path = file_test #from kaggle site
+    #test_file_path = "./test/test_short.csv"
     test_clean = clean_data(test_data)
     transformed_data = transform_data(test_clean, file_path)
     non_empty_data = remove_empty_rows(transformed_data)
-    imputed_data = imputeData(non_empty_data)
+    imputed_data = impute_data(non_empty_data)
 
     #drop features
     X_test = imputed_data.drop(['Ref_5x5_10th','Ref_5x5_50th','Ref_5x5_90th',
@@ -283,24 +276,20 @@ def evaluate_models(labels, train_input):
         """
     return clf
 
-
 def cv_score(clf, X, y):
     scores = cross_validation.cross_val_score(clf, X, y, cv=5, scoring='mean_absolute_error')
     print("CV score: ", abs(sum(scores) / len(scores)))
 
-
 model = None
-
-
 def train(train_input, labels):
-    #print("loading & preparing training data...")
-    #train_input, labels = prepare_train_data()
 
     #clf = evaluate_models(labels, train_input)
     #n_estimators = no. of trees in the forest
     #n_jobs = #no. of cores
     clf_rf = ensemble.RandomForestRegressor(n_estimators=100, max_depth=None, n_jobs=4, min_samples_split=1, random_state=0)
     #extree = ensemble.ExtraTreesRegressor(n_estimators=100, max_depth=None, min_samples_split=1, n_jobs=-1)
+    #clf_rf = ensemble.RandomForestRegressor(n_estimators=50, max_depth=None, n_jobs=4, min_samples_split=1,
+    #                                        max_features="auto")
 
     #params = {'n_estimators': 50, 'max_depth': 10, 'min_samples_split': 1,
     #          'learning_rate': 0.01, 'loss': 'ls', 'max_features':5}
@@ -347,8 +336,6 @@ def train(train_input, labels):
     #joblib.dump(clf, 'rain2.pkl')
 
     return model
-
-
 #endregion train
 
 #test
@@ -361,6 +348,7 @@ def write_prediction(test_y):
 
     totalDf = pd.concat(predictionDf,emptyRowsDf)
     totalDf.sort([totalDf.index])
+
     # write file
     prediction_file = './rain_prediction.csv'
     predictionDf.to_csv(prediction_file, index_label='Id', float_format='%.6f')
@@ -368,15 +356,10 @@ def write_prediction(test_y):
 
 def predict(model, test_input):
     print("predicting....")
-    #test_input = prepare_test_data()  #replace with test data
-    #print(train_input.iloc[[1]], labels[2])
     test_y = model.predict(test_input)
     print(len(test_valid_ids))
     print(len(test_y))
-
     return test_y
-
-
 
 #report
 # print("loading & preparing training data...")
@@ -392,4 +375,3 @@ model = train(train_input, labels)
 #analyze_plot_data(X_test, "test")
 #test_y=predict(model, X_test)
 #write_prediction(test_y)
-
