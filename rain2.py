@@ -30,14 +30,13 @@ http://blog.kaggle.com/2015/05/07/profiling-top-kagglers-kazanovacurrently-2-in-
 #ToDo: clean up train data with all missing input but valid label. put zero on label for such data
 #if one of the 4 related features (%5..%90) has no value..hard to predict
 def load_data(file, load_partial):
-    #traing data #of rows 13,765,202
-    #test data #of rows 8,022,758
+    #traing data #of rows 13,765,201
+    #test data #of rows 8,022,756
     if "test" in file:
         if load_partial:
             data = pd.read_csv(file, nrows=1022757)
         else:
             data = pd.read_csv(file)
-
         #test_id.append(np.array(data['Id']))
     else: #train data
         if load_partial:
@@ -45,7 +44,7 @@ def load_data(file, load_partial):
         else:
             data = pd.read_csv(file)
 
-    print("laoded data of " +str(data.shape))
+    print("loaded data of " +str(data.shape))
 
     return data
 
@@ -214,6 +213,7 @@ def prepare_train_data(file_path, load_Partial):
     return X_train, labels
 
 def prepare_test_data(file_path,load_partial):
+    print("preparing training data...")
     #file_path = "./test/test.csv"
     #test_file_path = file_test #from kaggle site
     #test_file_path = "./test/test_short.csv"
@@ -309,6 +309,7 @@ def pickle_model(model):
     # pickle model
     with open('./pickled_model/rain2.pickle','wb') as f:
         pickle.dump(model, f)
+    f.close()
     #joblib.dump(model, './pickled_model/rain2.pkl')
 
 def unpickle_model(file):
@@ -384,13 +385,15 @@ def write_prediction(test_y):
     emptyRowsDf =  pd.DataFrame(index=test_empty_rows_ids, columns=['Expected'], data=empty_test_y)
 
     totalDf = pd.concat([predictionDf,emptyRowsDf])
-    print(totalDf.head(20))
+    #print(totalDf.head(20))
     totalDf.sort_index(inplace=True)
-    print(totalDf.head(20))
+    #print(totalDf.head(20))
 
     # write file
     prediction_file = './rain_prediction.csv'
     totalDf.to_csv(prediction_file, index_label='Id', float_format='%.6f')
+    print("writing prediction to file Done")
+
 
 def predict(model, test_input, isPickled):
     print("predicting....")
@@ -404,6 +407,7 @@ def predict(model, test_input, isPickled):
         return test_y
     else:
         print("no model found..")
+
 
 #report
 # print("loading & preparing training data...")
