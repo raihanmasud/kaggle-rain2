@@ -1,9 +1,10 @@
 __author__ = 'Raihan Masud'
+import os
 import numpy as np
 import pandas as pd
+pd.options.mode.chained_assignment = None
 from sklearn import cross_validation
 from sklearn.metrics import mean_absolute_error
-import os
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.style.use('ggplot')
@@ -13,6 +14,7 @@ from sklearn import ensemble
 from sklearn import linear_model
 from sklearn.feature_selection import RFE
 from sklearn.externals import joblib
+import pickle
 
 """
 ToDo: Feature Engineering
@@ -27,12 +29,23 @@ http://blog.kaggle.com/2015/05/07/profiling-top-kagglers-kazanovacurrently-2-in-
 
 #ToDo: clean up train data with all missing input but valid label. put zero on label for such data
 #if one of the 4 related features (%5..%90) has no value..hard to predict
-def load_data(file):
+def load_data(file, load_partial):
+    #traing data #of rows 13,765,202
+    #test data #of rows 8,022,758
     if "test" in file:
-        data = pd.read_csv(file, nrows=1048576)
+        if load_partial:
+            data = pd.read_csv(file, nrows=1022757)
+        else:
+            data = pd.read_csv(file)
+
         #test_id.append(np.array(data['Id']))
     else: #train data
-        data = pd.read_csv(file)
+        if load_partial:
+            data = pd.read_csv(file,nrows=765202)
+        else:
+            data = pd.read_csv(file)
+
+    print("laoded data of " +str(data.shape))
 
     return data
 
@@ -47,20 +60,23 @@ def clean_data(data):
     # data.drop(null_refs_idx, axis = 0, inplace = True)
     return data
 
-
-test_valid_ids = []
-empty_rows_ids = []
+test_all_ids = []
+test_non_empty_ids = []
+test_empty_rows_ids = []
 def transform_data(data, file):
     data_avg = data.groupby(['Id']).mean()
-    #print(data_avg.columns)
-    #print(data_avg.index)
 
     if "test" in file:
-        global empty_rows_ids
-        empty_rows_ids = data[np.isnan(data['Ref'])].Id.tolist()
+        global test_all_ids
+        test_all_ids = data_avg.index
 
-        global test_valid_id
-        test_valid_id = data[np.isfinite(data['Ref'])].Id.tolist()
+        global test_empty_rows_ids
+        test_empty_rows_ids = data_avg.index[np.isnan(data_avg['Ref'])]
+
+
+        #ToDo: need valid rows to keep track
+        global test_non_empty_ids
+        test_non_empty_ids = list((set(test_all_ids) - set(test_empty_rows_ids)))
 
         #id = data['Id'].tolist()
         #dist_id = set(id)
@@ -149,19 +165,20 @@ def normal_distribute_data(X):
 
     #print(X['RhoHV'].describe())
 
-    #X['RhoHV'] = np.log10(X['RhoHV'])
+    X['RhoHV'] = X['RhoHV'].apply(lambda x : np.log10(x))
+
     #comment if removed as feature
     #X['RhoHV_5x5_10th'] = np.log10(X['RhoHV_5x5_10th'])
     #X['RhoHV_5x5_50th'] = np.log10(X['RhoHV_5x5_50th'])
     #X['RhoHV_5x5_90th'] = np.log10(X['RhoHV_5x5_90th'])
 
-    # rhoFeatures = ['RhoHV']#,'RhoHV_5x5_10th','RhoHV_5x5_50th','RhoHV_5x5_90th']
-    # for rhoFeature in rhoFeatures:
-    #     shiftBy = 0
-    #     rhoMean = X[rhoFeature].mean()
-    #     if rhoMean < 0:
-    #         shiftBy += abs(rhoMean)
-    #     X[rhoFeature] += shiftBy
+    rhoFeatures = ['RhoHV']#,'RhoHV_5x5_10th','RhoHV_5x5_50th','RhoHV_5x5_90th']
+    for rhoFeature in rhoFeatures:
+        shiftBy = 0
+        rhoMean = X[rhoFeature].mean()
+        if rhoMean < 0:
+            shiftBy += abs(rhoMean)
+        X[rhoFeature] += shiftBy
 
     return X
 
@@ -169,18 +186,21 @@ def normal_distribute_data(X):
 def impute_data(non_empty_data):
     return non_empty_data.fillna(0)
 
-def prepare_train_data(file_path):
+def prepare_train_data(file_path, load_Partial):
     print("preparing training data...")
-    train_data = load_data(file_path)
+    train_data = load_data(file_path,load_Partial)
     train_clean = clean_data(train_data)
     train_no_outlier = remove_outlier(train_clean)
+
     transformed_data = transform_data(train_no_outlier, file_path)
-    non_empty_data = remove_empty_rows(transformed_data)
-    X_train = standardize_data(non_empty_data)
+    non_empty_examples = remove_empty_rows(transformed_data)
+
+    labels = non_empty_examples['Expected']
+    X_train = non_empty_examples.drop(['Expected'], axis=1)
+
+    X_train = standardize_data(X_train)
     X_train = normal_distribute_data(X_train)
-    imputed_data = impute_data(X_train)
-    labels = imputed_data['Expected']
-    X_train = imputed_data.drop(['Expected'], axis=1)
+    X_train = impute_data(X_train)
 
     #drop features
     X_train = X_train.drop(['Ref_5x5_10th','Ref_5x5_50th','Ref_5x5_90th',
@@ -189,32 +209,35 @@ def prepare_train_data(file_path):
                                   'Zdr_5x5_10th','Zdr_5x5_50th','Zdr_5x5_90th',
                                   'Kdp_5x5_10th','Kdp_5x5_50th','Kdp_5x5_90th'], axis=1)
 
-    X_train = X_train.drop(['RhoHV'], axis=1)
+    #X_train = X_train.drop(['RhoHV'], axis=1)
     #print(X_train.head(5000))
     return X_train, labels
 
-def prepare_test_data(file_path):
+def prepare_test_data(file_path,load_partial):
     #file_path = "./test/test.csv"
     #test_file_path = file_test #from kaggle site
     #test_file_path = "./test/test_short.csv"
-    test_data = load_data(file_path)
+    test_data = load_data(file_path,load_partial)
     #test_file_path = file_test #from kaggle site
     #test_file_path = "./test/test_short.csv"
     test_clean = clean_data(test_data)
     transformed_data = transform_data(test_clean, file_path)
     non_empty_data = remove_empty_rows(transformed_data)
-    imputed_data = impute_data(non_empty_data)
+
+    X_test = standardize_data(non_empty_data)
+    X_test = normal_distribute_data(X_test)
+
+    imputed_data = impute_data(X_test)
 
     #drop features
     X_test = imputed_data.drop(['Ref_5x5_10th','Ref_5x5_50th','Ref_5x5_90th',
                                   'RefComposite_5x5_10th','RefComposite_5x5_50th','RefComposite_5x5_90th',
-                                  'RhoHV','RhoHV_5x5_10th','RhoHV_5x5_50th','RhoHV_5x5_90th',
+                                  'RhoHV_5x5_10th','RhoHV_5x5_50th','RhoHV_5x5_90th',
                                   'Zdr_5x5_10th','Zdr_5x5_50th','Zdr_5x5_90th',
                                   'Kdp_5x5_10th','Kdp_5x5_50th','Kdp_5x5_90th'], axis=1)
 
 
 
-    X_test = standardize_data(X_test)
     #global test_id
     #test_id = test_avg['Id']
     #test_input = test_avg.drop(['Id'], axis=1)
@@ -281,12 +304,24 @@ def cv_score(clf, X, y):
     print("CV score: ", abs(sum(scores) / len(scores)))
 
 model = None
+
+def pickle_model(model):
+    # pickle model
+    with open('./pickled_model/rain2.pickle','wb') as f:
+        pickle.dump(model, f)
+    #joblib.dump(model, './pickled_model/rain2.pkl')
+
+def unpickle_model(file):
+    with open('./pickled_model/rain2.pickle','rb') as f:
+        model = pickle.load(f)
+    return model
+
 def train(train_input, labels):
 
     #clf = evaluate_models(labels, train_input)
     #n_estimators = no. of trees in the forest
     #n_jobs = #no. of cores
-    clf_rf = ensemble.RandomForestRegressor(n_estimators=100, max_depth=None, n_jobs=4, min_samples_split=1, random_state=0)
+    clf_rf = ensemble.RandomForestRegressor(n_estimators=10, max_depth=None, n_jobs=4, min_samples_split=1, random_state=0)
     #extree = ensemble.ExtraTreesRegressor(n_estimators=100, max_depth=None, min_samples_split=1, n_jobs=-1)
     #clf_rf = ensemble.RandomForestRegressor(n_estimators=50, max_depth=None, n_jobs=4, min_samples_split=1,
     #                                        max_features="auto")
@@ -311,6 +346,9 @@ def train(train_input, labels):
     #model = clf.fit(train_input, labels)
     model = clf.fit(X_train, y_train)
 
+    print("pickling model...")
+    pickle_model(model)
+
     #feature engineering
     print("feature selection...")
     print("feature importance", model.feature_importances_)
@@ -332,8 +370,7 @@ def train(train_input, labels):
 
     print("scikit MAE", mean_absolute_error(y_test, pred_y))
 
-    #pickle model
-    #joblib.dump(clf, 'rain2.pkl')
+
 
     return model
 #endregion train
@@ -341,37 +378,43 @@ def train(train_input, labels):
 #test
 def write_prediction(test_y):
     print("writing to file....")
-    predictionDf = pd.DataFrame(index=test_valid_ids, columns=['Expected'], data=test_y)
+    predictionDf = pd.DataFrame(index=test_non_empty_ids, columns=['Expected'], data=test_y)
+    #predict 0 for empty rows/ids
+    empty_test_y = np.asanyarray([0 for _ in test_empty_rows_ids])
+    emptyRowsDf =  pd.DataFrame(index=test_empty_rows_ids, columns=['Expected'], data=empty_test_y)
 
-    empty_test_y = np.asanyarray([0 for i in range(0,empty_rows_ids)])
-    emptyRowsDf =  pd.DataFrame(index=empty_rows_ids, columns=['Expected'], data=empty_test_y)
-
-    totalDf = pd.concat(predictionDf,emptyRowsDf)
-    totalDf.sort([totalDf.index])
+    totalDf = pd.concat([predictionDf,emptyRowsDf])
+    print(totalDf.head(20))
+    totalDf.sort_index(inplace=True)
+    print(totalDf.head(20))
 
     # write file
     prediction_file = './rain_prediction.csv'
-    predictionDf.to_csv(prediction_file, index_label='Id', float_format='%.6f')
+    totalDf.to_csv(prediction_file, index_label='Id', float_format='%.6f')
 
-
-def predict(model, test_input):
+def predict(model, test_input, isPickled):
     print("predicting....")
-    test_y = model.predict(test_input)
-    print(len(test_valid_ids))
-    print(len(test_y))
-    return test_y
+
+    #model = joblib.load("./pickled_model/rain2.pkl") if isPickled else model
+    model =  unpickle_model("./pickled_model/rain2.pickle") if isPickled else model
+    if model:
+        test_y = model.predict(test_input)
+        print(len(test_all_ids)-len(test_empty_rows_ids))
+        print(len(test_y))
+        return test_y
+    else:
+        print("no model found..")
 
 #report
 # print("loading & preparing training data...")
 train_file_path = "./train/train.csv"
-train_input, labels = prepare_train_data(train_file_path)
+train_input, labels = prepare_train_data(train_file_path, True)
 #analyze_plot_data(train_input, "training")
 #analyze_plot_data(labels, "training")
-
 model = train(train_input, labels)
 
-#test_file_path = "./test/test.csv"
-#X_test = prepare_test_data(test_file_path)
+test_file_path = "./test/test.csv"
+X_test = prepare_test_data(test_file_path, True)
 #analyze_plot_data(X_test, "test")
-#test_y=predict(model, X_test)
-#write_prediction(test_y)
+test_y=predict(model, X_test, True)
+write_prediction(test_y)
