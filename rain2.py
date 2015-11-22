@@ -96,7 +96,11 @@ def add_features(data):
   Ref_count.name = 'Ref_count'
 
   Ref_std = data.groupby(['Id'], sort=False)['Ref'].std()
+  Ref_std = Ref_std.pow(2)
   Ref_std.name = 'Ref_std'
+
+  Ref_med = data.groupby(['Id'], sort=False)['Ref'].median()
+  Ref_med.name = 'Ref_med'
 
 
   RefComposite_MAX = data.groupby(['Id'], sort=False)['RefComposite'].max()
@@ -109,7 +113,11 @@ def add_features(data):
   RefComposite_count.name = 'RefComposite_count'
 
   RefComposite_std = data.groupby(['Id'], sort=False)['RefComposite'].std()
+  RefComposite_std = RefComposite_std.pow(2)
   RefComposite_std.name = 'RefComposite_std'
+
+  RefComposite_med = data.groupby(['Id'], sort=False)['RefComposite'].median()
+  RefComposite_med.name = 'RefComposite_med'
 
 
   Zdr_MAX = data.groupby(['Id'], sort=False)['Zdr'].max()
@@ -122,7 +130,12 @@ def add_features(data):
   Zdr_count.name = 'Zdr_count'
 
   Zdr_std = data.groupby(['Id'], sort=False)['Zdr'].std()
+  Zdr_std = Zdr_std.pow(2)
   Zdr_std.name = 'Zdr_std'
+
+  Zdr_med = data.groupby(['Id'], sort=False)['Zdr'].median()
+  Zdr_med.name = 'Zdr_med'
+
 
   Kdp_MAX = data.groupby(['Id'], sort=False)['Kdp'].max()
   Kdp_MAX.name = 'Kdp_MAX'
@@ -134,14 +147,35 @@ def add_features(data):
   Kdp_count.name = 'Kdp_count'
 
   Kdp_std = data.groupby(['Id'], sort=False)['Kdp'].std()
+  Kdp_std = Kdp_std.pow(2)
   Kdp_std.name = 'Kdp_std'
 
+  Kdp_med = data.groupby(['Id'], sort=False)['Kdp'].median()
+  Kdp_med.name = 'Kdp_med'
 
 
-  return Ref_MAX, Ref_MIN, Ref_count, Ref_std, RefComposite_MAX, \
-         RefComposite_MIN, RefComposite_count, RefComposite_std, \
-         Zdr_MAX, Zdr_MIN, Zdr_count, Zdr_std, \
-         Kdp_MAX, Kdp_MIN, Kdp_count, Kdp_std
+  RhoHV_MAX = data.groupby(['Id'], sort=False)['RhoHV'].max()
+  RhoHV_MAX.name = 'RhoHV_MAX'
+
+  RhoHV_MIN = data.groupby(['Id'], sort=False)['RhoHV'].min()
+  RhoHV_MIN.name = 'RhoHV_MIN'
+
+  RhoHV_count = data.groupby(['Id'], sort=False)['RhoHV'].count()
+  RhoHV_count.name = 'RhoHV_count'
+
+  RhoHV_std = data.groupby(['Id'], sort=False)['RhoHV'].std()
+  RhoHV_std = RhoHV_std.pow(2)
+  RhoHV_std.name = 'RhoHV_std'
+
+  RhoHV_med = data.groupby(['Id'], sort=False)['RhoHV'].median()
+  RhoHV_med.name = 'RhoHV_med'
+
+
+  return Ref_MAX, Ref_MIN, Ref_count, Ref_std, Ref_med,\
+         RefComposite_MAX, RefComposite_MIN, RefComposite_count, RefComposite_std, RefComposite_med,\
+         Zdr_MAX, Zdr_MIN, Zdr_count, Zdr_std, Zdr_med,\
+         Kdp_MAX, Kdp_MIN, Kdp_count, Kdp_std, Kdp_med,\
+         RhoHV_MAX, RhoHV_MIN, RhoHV_count, RhoHV_std, RhoHV_med
 
 
 
@@ -151,24 +185,11 @@ test_empty_rows_ids = []
 
 def transform_data(data, file):
   #Ref = NaN means no rain fall at that instant, safe to remove
-  #data = data[np.isfinite(data['Ref'])] #CV 23.4481724075
 
-  #ToDo: -ve Ref value can be removed too?
-  #data = data[data['Ref']>=0] #CV Score: 23.4583024399
+  #data = data[data['Ref']>=5] #CV Score: 23.4583024399
 
   #avg the valid Ref over the hour
   data_avg = data.groupby(['Id']).mean()  #just using mean CV score:  23.4247096352
-
-  Ref_Max, Ref_Min, Ref_count, Ref_std, RefComposite_MAX, \
-  RefComposite_MIN, RefComposite_count, RefComposite_std,\
-  Zdr_MAX, Zdr_MIN, Zdr_count, Zdr_std,\
-  Kdp_MAX, Kdp_MIN, Kdp_count, Kdp_std = add_features(data)
-
-  data_avg = pd.concat([data_avg, Ref_Max,Ref_Min, Ref_count,
-                        RefComposite_MAX, RefComposite_MIN, RefComposite_count, RefComposite_std,
-                        Zdr_MAX, Zdr_MIN, Zdr_count, Zdr_std,
-                        Kdp_MAX, Kdp_MIN, Kdp_count, Kdp_std], axis=1,join='inner')
-  #print(data.describe)
 
   if "test" in file:
     global test_all_ids
@@ -177,10 +198,25 @@ def transform_data(data, file):
     global test_empty_rows_ids
     test_empty_rows_ids = data_avg.index[np.isnan(data_avg['Ref'])]
 
-
-    #ToDo: need valid rows to keep track
     global test_non_empty_ids
     test_non_empty_ids = list((set(test_all_ids) - set(test_empty_rows_ids)))
+
+  data = data[np.isfinite(data['Ref'])]
+  #data = data[np.isfinite(data['Ref'])] #CV 23.4481724075
+
+  Ref_Max, Ref_Min, Ref_count, Ref_std, Ref_med,\
+  RefComposite_MAX, RefComposite_MIN, RefComposite_count, RefComposite_std, RefComposite_med,\
+  Zdr_MAX, Zdr_MIN, Zdr_count, Zdr_std, Zdr_med,\
+  Kdp_MAX, Kdp_MIN, Kdp_count, Kdp_std, Kdp_med,\
+  RhoHV_MAX, RhoHV_MIN, RhoHV_count, RhoHV_std, RhoHV_med  = add_features(data)
+
+  data_avg = pd.concat([data_avg, Ref_Max,Ref_Min, Ref_count, Ref_med,
+                        RefComposite_MAX, RefComposite_MIN, RefComposite_count, RefComposite_std, RefComposite_med,
+                        Zdr_MAX, Zdr_MIN, Zdr_count, Zdr_std, Zdr_med,
+                        Kdp_MAX, Kdp_MIN, Kdp_count, Kdp_std, Kdp_med,
+                        RhoHV_MAX, RhoHV_MIN, RhoHV_count, RhoHV_std, RhoHV_med], axis=1,join='inner')
+  #print(data.describe)
+
 
     #id = data['Id'].tolist()
     #dist_id = set(id)
@@ -196,7 +232,7 @@ def remove_outlier(train_data):
   #50 gives 23.26343648
 
 
-  train_data = train_data[train_data['Expected'] <= 70]
+  train_data = train_data[train_data['Expected'] <= 50]
   #set expected values to zero for examples that has most feature values(< 5) = 0
   #print(train_data.head(5))
   #change expected value where more than four features values are empty (0)
@@ -495,10 +531,7 @@ def cross_validate_model(model, X_train, y_train):
   cvs = 21.5+cv_score(model,  X_train, y_train)
   print("MAE on cross validation set: "+str(cvs))
 
-
-
 model = None
-
 def pickle_model(model):
   # pickle model
   with open('./pickled_model/rain2.pickle', 'wb') as f:
@@ -513,10 +546,10 @@ def unpickle_model(file):
   return model
 
 
-def split_train_data(train_input, labels):
+def split_train_data(train_input, labels, t_size):
   # train_test does shuffle and random splits
   X_train, X_test, y_train, y_test = cross_validation.train_test_split(
-    train_input, labels, test_size=0.3, random_state=0)
+    train_input, labels, test_size=t_size, random_state=0)
   return  X_train, X_test, y_train, y_test
 
 
@@ -527,7 +560,7 @@ def test_model(model, X_test, y_test):
 
 
 
-def train_model(X_train, y_train, isPickled):
+def train_model(est, X_train, y_train, isPickled):
   #clf = evaluate_models(labels, train_input)
   #n_estimators = no. of trees in the forest
   #n_jobs = #no. of cores
@@ -538,9 +571,9 @@ def train_model(X_train, y_train, isPickled):
 
   #ne=400, md=10, ss = 50, sl=10, 10 MAE 22.7590658805 and with learning rate = 0.01 MAE 23.5737808932
   #clf_gbt = ensemble.GradientBoostingRegressor(n_estimators=400, max_depth=10, min_samples_split=10, min_samples_leaf=10, learning_rate=0.01, loss='ls')
-  clf_gbt = ensemble.GradientBoostingRegressor(n_estimators=40, learning_rate=0.1, max_features =0.3, max_depth=4, min_samples_leaf=4,  loss='lad')
+  #clf_gbt = ensemble.GradientBoostingRegressor(n_estimators=40, learning_rate=0.1, max_features =0.3, max_depth=4, min_samples_leaf=3,  loss='lad')
 
-  clf = clf_gbt
+  clf = est
 
 
 
@@ -621,7 +654,7 @@ def predict(model, test_input, isPickled):
 def analyze_results():
   df_sample = pd.read_csv('C:/Work/kaggle/how_much_rain2/sample_solution.csv/sample_solution.csv')
   #df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/extratree/rain_prediction.csv')
-  df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/gdb/rain_prediction.csv')
+  df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/gdb/candidate_predictions/rain_prediction.csv')
 
   #df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/extratree/rain_prediction_inserted.csv')
 
@@ -656,10 +689,11 @@ train_file_path = "./train/train.csv"
 train_input, labels = prepare_train_data(train_file_path, True)
 #analyze_plot_data(train_input, "training")
 #analyze_plot_data(labels, "training")
-X_train, X_train_test, y_train, y_train_test = split_train_data(train_input, labels)
-model = train_model(X_train, y_train, False)
+X_train, X_train_test, y_train, y_train_test = split_train_data(train_input, labels, 0.3)
+est = ensemble.GradientBoostingRegressor(n_estimators=300, learning_rate=0.1, max_features =0.3, max_depth=4, min_samples_leaf=3,  loss='lad')
+cross_validate_model(est, X_train, y_train)
+model = train_model(est, X_train, y_train, False)
 #plot_training_curve(model, X_train, y_train)
-cross_validate_model(model, X_train, y_train)
 test_model(model, X_train_test, y_train_test)
 
 #evaluate_models(X_train,y_train)
