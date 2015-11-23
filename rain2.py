@@ -419,7 +419,7 @@ def prepare_test_data(file_path, load_partial):
   non_empty_data = remove_empty_rows(transformed_data)
 
   X_test = standardize_data(non_empty_data)
-  X_test = normal_distribute_data(X_test)
+  #X_test = normal_distribute_data(X_test)
 
 
   #drop features
@@ -587,7 +587,7 @@ def train_model(est, X_train, y_train, isPickled):
 
   global model
 
-  #print("training model...")
+  print("training model...")
   #model = clf.fit(train_input, labels)
   model = clf.fit(X_train, y_train)
 
@@ -654,7 +654,7 @@ def predict(model, test_input, isPickled):
 def analyze_results():
   df_sample = pd.read_csv('C:/Work/kaggle/how_much_rain2/sample_solution.csv/sample_solution.csv')
   #df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/extratree/rain_prediction.csv')
-  df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/gdb/candidate_predictions/rain_prediction.csv')
+  df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/gdb/rain_prediction.csv')
 
   #df_my_res = pd.read_csv('C:/Work/kaggle/how_much_rain2/prediction_aws/extratree/rain_prediction_inserted.csv')
 
@@ -690,7 +690,7 @@ train_input, labels = prepare_train_data(train_file_path, True)
 #analyze_plot_data(train_input, "training")
 #analyze_plot_data(labels, "training")
 X_train, X_train_test, y_train, y_train_test = split_train_data(train_input, labels, 0.3)
-est = ensemble.GradientBoostingRegressor(n_estimators=300, learning_rate=0.1, max_features =0.3, max_depth=4, min_samples_leaf=3,  loss='lad')
+est = ensemble.GradientBoostingRegressor(n_estimators=400, learning_rate=0.1, max_features =0.3, max_depth=4, min_samples_leaf=3,  loss='huber', alpha=0.55)
 cross_validate_model(est, X_train, y_train)
 model = train_model(est, X_train, y_train, False)
 #plot_training_curve(model, X_train, y_train)
